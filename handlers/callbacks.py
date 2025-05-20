@@ -3,13 +3,13 @@ from aiogram import Router,F
 from keyboards.inline import language_kb,delete_his_kb
 from aiogram.fsm.context import FSMContext
 from misc.state import TranslationState
-from googletrans import Translator
+from deep_translator import GoogleTranslator
 from keyboards.reply import start_kb
 from database.main import translations_repo,users_repo,history_repo
 from datetime import datetime
 
 router = Router()
-translator = Translator()
+translator = GoogleTranslator()
 
 
 @router.callback_query(F.data == 'home')
