@@ -2,17 +2,18 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardButton
 from deep_translator import GoogleTranslator
 
-# Get the languages only once
-LANGUAGES = GoogleTranslator.get_supported_languages(as_dict=True)
+translator = GoogleTranslator(source='auto', target='en')
+LANGUAGES = translator.get_supported_languages(as_dict=True)
 
-def language_kb(start=0, limit=9, current_page=1, is_from=True):
+def language_kb(start=0, limit=30, current_page=1, is_from=True):
     kb = InlineKeyboardBuilder()
 
     # Turn dict to list of tuples (lang_code, lang_name)
     language_items = list(LANGUAGES.items())
-    total_pages = (len(language_items) + limit - 1) // limit
+    total_pages = round(len(LANGUAGES) / 30 + 1)
 
-    for lang_code, lang_name in language_items[start:limit]:
+
+    for lang_name,lang_code in language_items[start:limit]:
         if is_from:
             callback_data = f'get_lang_from:{lang_code}:{lang_name}'
         else:
@@ -34,4 +35,11 @@ def language_kb(start=0, limit=9, current_page=1, is_from=True):
 def delete_his_kb(tran_id: int):
     kb = InlineKeyboardBuilder()
     kb.button(text='Delete History', callback_data=f'delete:{tran_id}')
+    return kb.as_markup()
+
+def admin_panel():
+    kb = InlineKeyboardBuilder()
+    kb.button(text='Users',callback_data='admin:users')
+    kb.button(text='Translations',callback_data='admin:translations')
+
     return kb.as_markup()

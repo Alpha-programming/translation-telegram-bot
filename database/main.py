@@ -25,7 +25,11 @@ db_table = DatabaseTables('translations.db')
 db_table.create("""
 CREATE TABLE IF NOT EXISTS users(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    chat_id BIGINT UNIQUE
+    chat_id BIGINT UNIQUE,
+    first_name TEXT,
+    last_name TEXT,
+    username TEXT,
+    language TEXT
 );
 
 CREATE TABLE IF NOT EXISTS translations(
@@ -45,12 +49,22 @@ class UsersRepo(DatabaseConnection):
         result = self.cursor.fetchone()
         return result
 
-    def add_user(self, chat_id:int) -> None:
-        query = 'INSERT INTO users(chat_id) VALUES (?);'
+    def add_user(self, chat_id:int, first_name,last_name,username,language) -> None:
+        query = 'INSERT INTO users(chat_id,first_name,last_name,username,language) VALUES (?,?,?,?,?);'
 
         if self.get_user(chat_id) is None:
-            self.cursor.execute(query, (chat_id,))
+            self.cursor.execute(query, (chat_id,first_name,last_name,username,language))
             self.connection.commit()
+
+    def get_all_users(self):
+        self.cursor.execute('SELECT * FROM users')
+        result = self.cursor.fetchall()
+        return result
+
+    def delete_user(self,user_id):
+        query = 'DELETE FROM users WHERE id = ?'
+        self.cursor.execute(query, (user_id,))
+        self.connection.commit()
 
 from datetime import datetime
 
@@ -79,6 +93,7 @@ class HistoryRepo(DatabaseConnection):
     def delete_history(self, _id) -> None:
         query = 'DELETE FROM translations WHERE id = ?;'
         self.cursor.execute(query,(_id,))
+        self.connection.commit()
 
 users_repo = UsersRepo(BASE_DIR/'translations.db')
 translations_repo = TranslationRepo(BASE_DIR/'translations.db')

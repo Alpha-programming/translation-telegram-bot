@@ -2,14 +2,20 @@ from aiogram.types import CallbackQuery,Message
 from aiogram import Router,F
 from keyboards.inline import language_kb,delete_his_kb
 from aiogram.fsm.context import FSMContext
-from misc.state import TranslationState
+from misc.state import TranslationState,AdminState
 from deep_translator import GoogleTranslator
 from keyboards.reply import start_kb
 from database.main import translations_repo,users_repo,history_repo
 from datetime import datetime
+import os
+from dotenv import  load_dotenv
+load_dotenv()
+
+PASSWORD = os.getenv('PASSWORD')
+CHAT_ID = os.getenv("CHAT_ID")
 
 router = Router()
-translator = GoogleTranslator()
+
 
 
 @router.callback_query(F.data == 'home')
@@ -34,8 +40,8 @@ async def next_languages(call: CallbackQuery, state: FSMContext):
 
     await call.message.edit_reply_markup(
         reply_markup=language_kb(
-            start=int(start)+9,
-            limit = int(finish) + 9,
+            start=int(start)+30,
+            limit = int(finish) + 30,
             current_page=int(page) + 1,
             is_from=state_data.get('is_from')
         )
@@ -53,8 +59,8 @@ async def prev_languages(call: CallbackQuery, state: FSMContext):
 
     await call.message.edit_reply_markup(
         reply_markup=language_kb(
-            start=int(start)-9,
-            limit=int(finish)-9,
+            start=int(start)-30,
+            limit=int(finish)-30,
             current_page=int(page)-1,
             is_from = state_data.get('is_from')
         )
@@ -100,7 +106,8 @@ async def translate(message: Message, state: FSMContext):
 
     text = message.text
 
-    translated_text = translator.translate(text=text, dest=lang_to_code, src=lang_from_code).text
+    translator = GoogleTranslator(source=lang_from_code, target=lang_to_code)
+    translated_text = translator.translate(text)
 
     user_id = users_repo.get_user(chat_id=message.from_user.id)
     current_datetime = datetime.now()
@@ -131,3 +138,27 @@ async def delete(call: CallbackQuery, state:FSMContext):
     history_repo.delete_history(_id = _id)
     await call.message.edit_text('This translation was deleted from your history of translations',reply_markup=None)
 
+#admin
+
+@router.callback_query(F.data.startswith('admin'))
+async def admin_users(call: CallbackQuery, state: FSMContext):
+    __, _action = call.data.split(':')
+    await state.update_data(action=_action)
+    await call.message.edit_text(text='Please write a password to access this page')
+    await state.set_state(AdminState.password)
+
+@router.message(AdminState.password)
+async def give_datas(message: Message, state: FSMContext):
+    password = message.text
+    chat_id = message.from_user.id
+    data = await state.get_data()
+    action = data['action']
+    if password == PASSWORD and chat_id == int(CHAT_ID):
+        if action == 'users':
+            users = users_repo.get_all_users()
+            for user in users:
+                await message.answer(f'User ID: {user[0]}\nChat ID: {user[1]}\nFirst Name: {user[2]}\nLast Name: {user[3]}\nUsername: {user[4]}\nLanguage: {user[5]}')
+        elif action == 'translations':
+            pass
+    else:
+        await message.answer("You're not allowed to access this data")
